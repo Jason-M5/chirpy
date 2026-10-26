@@ -3,23 +3,27 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 )
 
-type apiHandler struct{}
-
-func (apiHandler) ServeHTTP(http.ResponseWriter, *http.Request) {}
+func handleHealthz(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(200)
+	w.Write([]byte("OK"))
+}
 
 func main() {
-	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir(".")))
+	const filepathRoot = "."
+	const port = "8080"
 
-	s := &http.Server{
-		Addr:           ":8080",
-		Handler:        mux,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+	mux := http.NewServeMux()
+	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot))))
+	mux.HandleFunc("/healthz", handleHealthz)
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: mux,
 	}
-	log.Fatal(s.ListenAndServe())
+
+	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
+	log.Fatal(srv.ListenAndServe())
 }
